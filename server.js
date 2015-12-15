@@ -3,16 +3,16 @@ var parser=require('body-parser');
 var mongodb=require('mongodb').MongoClient;
 var app =express();
 var url="mongodb://localhost:27017/omoyo";
-var json=new Array();
+var json =new Array();
 var parse=require('url');
 var mongoose=require('mongoose');
 mongoose.connect('mongodb://localhost:27017/omoyo');
 var jsonparser=parser.json();
 app.use(jsonparser);
 app.use(parser.urlencoded({extended:true}));
-
+var globalCounter=0;
 var Schema=mongoose.Schema;
-
+var cityNameArray=new Array("delhi","noida","mumbai","hyderabad","goa");
 //Shop
 var shop=new Schema({
 	shop_id:Number,shop_name:String,shop_status:Boolean,shop_mobile_number:Number,shop_address:String,location_id:Number,shop_description:String,
@@ -57,17 +57,32 @@ var shopcount=new Schema({
 var CategoryShopCount=mongoose.model("CategoryShopCount",shopcount);
 
 
+//incrementcounteroftheapp
+var inccount=new Schema({
+	collection_name:String,counter:Number
+});
+
+var IncCounter=mongoose.model("IncCounter",inccount);
+
+
 //City
 var city=new  Schema({
 	city_name:String,
 	city_id:Number,
-	date:Date
+	date:String
 });
 
 var City=mongoose.model('City',city);
 
+var kk=function(){
+	
 
-
+		console.log("Element: %s",cityNameArray[globalCounter]);
+		counterOfTheApp("city",City, cityNameArray[globalCounter]);
+	    globalCounter++;
+	
+};
+kk();
 // Area
 var area= new  Schema({
 	city_id:Number,
@@ -86,40 +101,60 @@ var ads=new Schema({
 
 var Ads=mongoose.model("Ads",ads);
 
-//incrementcounteroftheapp
-var inccount=new Schema({
-	collection_name:String,counter:Number
-});
 
-var IncCounter=mongoose.model("IncCounter",inccount);
-
-var k= function(collectionType){
-	IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
+function counterOfTheApp(collectionType , Object , cityName){
+	  IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
 		if(c.nModified==1)
+		{
 		IncCounter.findOne({collection_name:collectionType},function(error,collection){
-			console.log(collection.counter);
-			return collection.counter;
+			temp(Object,collection.counter , cityName);
+			console.log("IN %s",collection.counter);
 		});
+		}
 		if(c.nModified==0)
 		{
 			var data=new IncCounter({collection_name:collectionType,counter:1007});
 			data.save(function(error,co){
 				if(error)return console.log(error);
-				console.log("Collection %s saved",collectionType);
+				//console.log("Collection %s saved",collectionType);
+			   //
 			});
+	
 		}
+		
+	});
+	
+};
+
+
+var counterOfTheYear=function(collection , Object){
+	Object.Count({},function(error,count){
+		
 	});
 };
 
-var count=k("shop");
-count=k("category");
-count=k("subcategory");
-count=k("subcategoryshopcount");
-count=k("location");
-count=k("categoryshopcount");
-count=k("city");
-count=k("area");
-count=k("ads")
+
+function temp(Object,value,cityName){
+	var data=new Object({city_name:cityName,city_id:value,date:currentDate()});
+	console.log("DATA %s",data);
+         Object.count({city_name:cityName},function(error,count){
+		if(error)return console.log(error);
+	if(count == 0){
+		data.save(function(error,data){
+			if(error)return console.log(error);
+			console.log("Saved");
+			if(globalCounter < cityNameArray.length){
+			kk();
+			}
+		});
+	}
+	});
+}
+
+function currentDate(){
+	var date=new Date();
+	return date.getDate()+":"+date.getUTCMonth()+":"+date.getUTCFullYear()+":"+date.getUTCHours()+":"+date.getUTCMinutes()+":"+date.getUTCSeconds();
+}
 
 
 app.get('/getcity/',function(req,res){
