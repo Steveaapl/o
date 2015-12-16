@@ -11,9 +11,11 @@ var jsonparser=parser.json();
 app.use(jsonparser);
 app.use(parser.urlencoded({extended:true}));
 var globalCounter=0;
+var flag=true;
+var urlBase="http://192.168.0.109/bitmap/categorybitmap/"
 var Schema=mongoose.Schema;
-var areaNameArray=new Array("area1","area2","area3","area4","area5");
-//Shop
+
+
 
 var shop=new Schema({
 	shop_id:Number,shop_name:String,shop_status:Boolean,shop_mobile_number:Number,shop_address:String,location_id:Number,shop_description:String,
@@ -29,51 +31,62 @@ var subcategory=new Schema({
 
 var SubCategory=mongoose.model("SubCategory",subcategory);
 
+
+var kk=function(){
+	counterOfTheApp("subcategory",SubCategory);
+};
+kk();
+
+
 //subshopcount
-var subcategorycount=new Schema({
+var subcategoryshopcount=new Schema({
 sub_category_id:Number,count:Number,date:Date
 });
 
-var SubCategoryShopCount=mongoose.model("SubCategoryShopCount",subcategorycount);
+var SubCategoryShopCount=mongoose.model("SubCategoryShopCount",subcategoryshopcount);
 
-//location
+
+
+
+
+//location // done 
 var location=new Schema({
-  location_name:String,location_id:Number,city_id:Number,area_id:Number,date:Date
+  location_name:String,location_id:Number,city_id:Number,area_id:Number,date:String
 });
 
 var Location=mongoose.model("Location",location);
 
-var kk=function(){
-	
-
-		console.log("Element: %s",areaNameArray[globalCounter]);
-		counterOfTheApp("location",Location, areaNameArray[globalCounter]);
-	    globalCounter++;
-	
-};
-kk();
-
-//Category
-var category=new Schema({
-category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category_shop:Boolean,date:Date
+// Area  //done
+var area= new  Schema({
+	city_id:Number,
+	area_id:Number,
+	area_name:String,
+	date:String
 });
 
-var Category = mongoose.model("Category",category); 
+var Area=mongoose.model('Area',area);
 
-//ShopCount
-var shopcount=new Schema({
-	category_id:Number,count:Number,date:Date
-});
-
-var CategoryShopCount=mongoose.model("CategoryShopCount",shopcount);
-
-
-//incrementcounteroftheapp
 var inccount=new Schema({
 	collection_name:String,counter:Number
 });
 
 var IncCounter=mongoose.model("IncCounter",inccount);
+
+//Category //done
+var category=new Schema({
+category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
+});
+
+var Category = mongoose.model("Category",category); 
+
+//ShopCount
+var categoryshopcount=new Schema({
+	categoryshopcount_id:Number,category_id:Number,count:Number,date:String
+});
+
+var CategoryShopCount=mongoose.model("CategoryShopCount",categoryshopcount);
+
+
 
 
 //City  // Done
@@ -86,15 +99,7 @@ var city=new  Schema({
 var City=mongoose.model('City',city);
 
 
-// Area  //done
-var area= new  Schema({
-	city_id:Number,
-	area_id:Number,
-	area_name:String,
-	date:String
-});
 
-var Area=mongoose.model('Area',area);
 
 
 
@@ -107,16 +112,34 @@ var ads=new Schema({
 var Ads=mongoose.model("Ads",ads);
 
 
-function counterOfTheApp(collectionType , Object , areaName){
+
+
+//incrementcounteroftheapp
+
+
+
+
+
+function counterOfTheApp(collectionType , Object ){
+	
 	  IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
 		if(c.nModified==1)
 		{
 		IncCounter.findOne({collection_name:collectionType},function(error,collection){
-			City.findOne({city_name:'goa'},function(errer,coll){
-				temp(Object, collection.counter ,coll.city_id, areaName);
+			City.find({},function(error,collarray){
+				if(globalCounter == collarray.length-1){
+					flag=false;
+				}
+				if(collarray[globalCounter].sub_category)
+			temp(Object,collection.counter,collarray[globalCounter].city_id,7)
+			else{
+				if(flag)
+			{
+					kk();
+					globalCounter++;
+			}
+			}
 			});
-			
-			console.log("IN %s",collection.counter);
 		});
 		}
 		if(c.nModified==0)
@@ -138,18 +161,21 @@ function counterOfTheApp(collectionType , Object , areaName){
 
 
 
-function temp(Object,area_id,city_id,areaName){
-	var data=new Object({city_id:city_id,area_id:area_id,area_name:areaName,date:currentDate()});
-	console.log("DATA %s",data);
-         Object.count({area_id:area_id},function(error,count){
+function temp(Object,categoryshopcount_id,category_id,count){
+	var data=new Object({categoryshopcount_id:categoryshopcount_id,category_id:category_id,count:count,date:currentDate()
+	});
+	//console.log("DATA %s",data);
+         Object.count({category_id:category_id},function(error,count){
 		if(error)return console.log(error);
 	if(count == 0)
 	{
 		data.save(function(error,data){
 			if(error)return console.log(error);
 			console.log("Saved");
-			if(globalCounter < areaNameArray.length){
-			kk();
+			if(flag)
+			{
+					kk();
+					globalCounter++;
 			}
 		});
 	}
