@@ -10,11 +10,10 @@ mongoose.connect('mongodb://localhost:27017/omoyo');
 var jsonparser=parser.json();
 app.use(jsonparser);
 app.use(parser.urlencoded({extended:true}));
-var globalCounter=0;
+var globalCounter=0,subcount=1,ref=0;;
 var flag=true;
-var urlBase="http://192.168.0.109/bitmap/categorybitmap/"
+var urlBase="http://192.168.0.109/bitmap/subcategorybitmap/"
 var Schema=mongoose.Schema;
-
 
 
 var shop=new Schema({
@@ -24,9 +23,24 @@ var shop=new Schema({
 
 var Shop=mongoose.model("Shop",shop);
 
+//Category  //Done
+var category=new Schema({
+category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
+});
+
+var Category = mongoose.model("Category",category); 
+
+
+//ShopCount
+var categoryshopcount=new Schema({
+	categoryshopcount_id:Number,category_id:Number,count:Number,date:String
+});
+
+var CategoryShopCount=mongoose.model("CategoryShopCount",categoryshopcount);
+
 //SubShop
 var subcategory=new Schema({
-	category_id:Number,sub_category_id:Number,sub_category_name:String,sub_category_bitmap_url:String,sub_category_symbol:String,sub_category_item:[{item:String}],date:Date
+	category_id:Number,sub_category_id:Number,sub_category_name:String,sub_category_bitmap_url:String,sub_category_symbol:String,sub_category_item:[{item:String}],date:String
 });
 
 var SubCategory=mongoose.model("SubCategory",subcategory);
@@ -73,18 +87,9 @@ var inccount=new Schema({
 var IncCounter=mongoose.model("IncCounter",inccount);
 
 //Category //done
-var category=new Schema({
-category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
-});
 
-var Category = mongoose.model("Category",category); 
 
-//ShopCount
-var categoryshopcount=new Schema({
-	categoryshopcount_id:Number,category_id:Number,count:Number,date:String
-});
 
-var CategoryShopCount=mongoose.model("CategoryShopCount",categoryshopcount);
 
 
 
@@ -121,25 +126,25 @@ var Ads=mongoose.model("Ads",ads);
 
 
 function counterOfTheApp(collectionType , Object ){
-	
-	  IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
+
+	Category.find({},function(error,collarray){
+				if(collarray[globalCounter].sub_category)
+			{
+				ref=collarray.length;
+				
+				  IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
 		if(c.nModified==1)
 		{
 		IncCounter.findOne({collection_name:collectionType},function(error,collection){
-			City.find({},function(error,collarray){
-				if(globalCounter == collarray.length-1){
+			CategoryShopCount.findOne({category_id:collarray[globalCounter].category_id},function(err,doc){
+				if(subcount == doc.count)
+				{
 					flag=false;
 				}
-				if(collarray[globalCounter].sub_category)
-			temp(Object,collection.counter,collarray[globalCounter].city_id,7)
-			else{
-				if(flag)
-			{
-					kk();
-					globalCounter++;
-			}
-			}
+				temp(Object,collarray[globalCounter].category_id,collection.counter,"sub_name"+subcount,urlBase+"sub.jpg","Su",[{item:'1'}]);
+				
 			});
+			
 		});
 		}
 		if(c.nModified==0)
@@ -154,6 +159,18 @@ function counterOfTheApp(collectionType , Object ){
 		}
 		
 	});
+			}
+			else{
+				if( globalCounter<ref-1)
+			{
+				console.log("Glob false %s",globalCounter);
+					kk();
+					globalCounter++;
+			}
+			}
+			});
+	
+	
 	
 };
 
@@ -161,21 +178,34 @@ function counterOfTheApp(collectionType , Object ){
 
 
 
-function temp(Object,categoryshopcount_id,category_id,count){
-	var data=new Object({categoryshopcount_id:categoryshopcount_id,category_id:category_id,count:count,date:currentDate()
+function temp(Object,category_id,sub_category_id,sub_category_name,sub_category_bitmap_url,sub_category_symbol,sub_category_item){
+	var data=new Object({category_id:category_id,sub_category_id:sub_category_id,sub_category_name:sub_category_name,sub_category_bitmap_url:sub_category_bitmap_url
+	,sub_category_symbol:sub_category_symbol,sub_category_item:sub_category_item,date:currentDate()
 	});
 	//console.log("DATA %s",data);
-         Object.count({category_id:category_id},function(error,count){
+         Object.count({sub_category_id:sub_category_id},function(error,count){
 		if(error)return console.log(error);
 	if(count == 0)
 	{
 		data.save(function(error,data){
 			if(error)return console.log(error);
-			console.log("Saved");
 			if(flag)
 			{
 					kk();
+					subcount++;
+					console.log("Saved");
+			}
+			else{
+				subcount=1;
+				if( globalCounter <ref-1){
+					 kk();
 					globalCounter++;
+					flag=true;	
+				console.log("Glog %s , %s",ref-1,globalCounter);
+				}
+				else{
+					console.log(ref-1);
+				}
 			}
 		});
 	}
