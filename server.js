@@ -12,7 +12,7 @@ app.use(jsonparser);
 app.use(parser.urlencoded({extended:true}));
 var globalCounter=0,subcount=0,ref=1,ref2=1;
 var flag=true,flag1=true,flag2=true,flag3=true;
-var urlBase="http://192.168.0.109/bitmap/shop/"
+var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
 
 //Category  //Done
@@ -61,13 +61,6 @@ var shop=new Schema({
 
 var Shop=mongoose.model("Shop",shop);
 
-
-var kk=function(){
-	counterOfTheApp("shop",Shop);
-};
-kk();
-
-
 //location // done 
 var location=new Schema({
   location_name:String,location_id:Number,city_id:Number,area_id:Number,date:String
@@ -104,26 +97,65 @@ var city=new  Schema({
 
 var City=mongoose.model('City',city);
 
-
-
-
-
-
 //Ads
-
 var ads=new Schema({
-	ads_id:Number,location_id:Number,shop_id:Number,category_id:Number,description:String,time_in:Date,tme_out:Date,ads_status:Boolean,item:[{item:String}],date:Date
+	ads_id:Number,location_id:Number,shop_id:Number,category_id:Number,sub_category_id:Number,ads_description:String,
+	ads_item:[{item:String}],ads_status:Boolean,ads_bitmap_url:String,
+	ads_time_in:String,ads_time_out:String,date:String
 });
 
 var Ads=mongoose.model("Ads",ads);
 
-
-
+var kk=function(){
+ adsInsert("ads",Ads);
+};
+//kk();
 
 //incrementcounteroftheapp
 
+function adsInsert(collectionName,Object){
+	Shop.find({},function(err,doc){
+		IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+		if(c.nModified==1){
+			IncCounter.findOne({collection_name:collectionName},function(error,collection){
+				adsTemp(Object,collection.counter,doc[globalCounter].location_id,doc[globalCounter].shop_id,doc[globalCounter].category_id,doc[globalCounter].sub_category_id
+				,"Awesome Offer's",[{item:'iApple'}],true,urlBase+"ads.jpg")
+				if(globalCounter == doc.length-1){
+					flag=false;
+				}
+			});
+		}
+		
+	});
+	});
+}
 
+function adsTemp(Object,ads_id,location_id,shop_id,category_id,sub_category_id,ads_description,ads_item,ads_status,ads_bitmap_url){
 
+	var data=new Object({ads_id:ads_id,location_id:location_id,shop_id:shop_id,category_id:category_id,sub_category_id:sub_category_id,ads_description:ads_description,
+	ads_item:ads_item,ads_status:ads_status,ads_bitmap_url:ads_bitmap_url,ads_time_in:currentDate(),ads_time_out:currentDate(),date:currentDate()
+	});
+         Object.count({sub_id:sub_category_id},function(error,count){
+		if(error)return console.log(error);
+	if(count == 0)
+	{
+		data.save(function(error,data){
+			if(error)return console.log(error);
+			if(flag)
+			{
+					kk();
+					globalCounter++;
+					
+			}
+			else{
+				console.log("Saved data count %s", globalCounter);
+			}
+		});
+	}
+	});
+	
+	
+}
 
 
 function counterOfTheAppForSub(collectionType , Object ){
@@ -336,25 +368,72 @@ function currentDate(){
 	return date.getDate()+":"+date.getUTCMonth()+":"+date.getUTCFullYear()+":"+date.getUTCHours()+":"+date.getUTCMinutes()+":"+date.getUTCSeconds();
 }
 
-
+//Get for city name // first hit shot
 app.get('/getcity/',function(req,res){
 console.log("Hello City");
-City.find().select({city:1,_id:0}).sort({city:1}).exec(function(error,data){
+City.find({}).select({city_name:1,_id:0,city_id:1,date:1}).sort({city_name:1}).exec(function(error,data){
 	res.json(data);
-	console.log(data);
+	//console.log(data);
 });
 });
 
-
-
+//Post for area name // second hit shot
 app.post("/getarea/",function(req,res){
-	Area.find({city:req.body.city}).select({area:1,_id:0}).exec(function(error,data){
+	Area.find({city_id:(Number)(req.body.city_id)}).select({_id:0}).exec(function(error,data){
 	res.json(data);
-	console.log(data);
+	//console.log(data);
 	});
 });
 
 
+
+//Post for laction id // third hit shot
+app.post("/location/",function(req,res){
+	var city_id=(Number)(req.body.city_id);
+	var area_id=(Number)(req.body.area_id);
+	
+	Location.findOne({city_id:city_id,area_id:area_id}).select({_id:0}).exec(function(error,data){
+		res.json(data);
+		//console.log(data);
+	});
+	
+});
+
+app.get("/category/",function(req,res){
+	Category.find({},function(error,data){
+		res.json(data);
+		//console.log(data);
+	});
+});
+
+//request for category images
+app.get('/bitmap/category/category.jpg',function(req,res,next){
+	var options={root:__dirname+'/bitmap/category/',
+		dotfiles:'allow',
+		headers:{
+			'x-timestamp':Date.now(),
+			'x-sent':true
+		}
+		};
+		res.sendFile('category.jpg',options,function(error){
+			if(error)
+			{
+				console.log('Error occured in downloading index.js file due to:'+error);
+			}
+			else{
+				console.log("File delivered....");
+			}
+		});
+		
+});
+
+//request for category shop count
+app.post("/categoryshopcount/",function(req,res){
+	CategoryShopCount.findOne({category_id:(Number)(req.body.category_id)},function(error,doc){
+		res.json(doc);
+		//console.log(doc);
+	});
+});
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
