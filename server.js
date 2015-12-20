@@ -370,7 +370,6 @@ function currentDate(){
 
 //Get for city name // first hit shot
 app.get('/getcity/',function(req,res){
-console.log("Hello City");
 City.find({}).select({city_name:1,_id:0,city_id:1,date:1}).sort({city_name:1}).exec(function(error,data){
 	res.json(data);
 	//console.log(data);
@@ -434,6 +433,36 @@ app.post("/categoryshopcount/",function(req,res){
 		//console.log(doc);
 	});
 });
+
+//request for ads 
+app.post("/ads/",function(req,res){
+	Ads.find({},function(error,doc){
+		res.json(doc);
+		console.log(doc);
+	});
+});
+
+//request for ads bitmap
+app.get('/bitmap/ads/ads.jpg',function(req,res,next){
+	var options={root:__dirname+'/bitmap/ads/',
+		dotfiles:'allow',
+		headers:{
+			'x-timestamp':Date.now(),
+			'x-sent':true
+		}
+		};
+		res.sendFile('ads.jpg',options,function(error){
+			if(error)
+			{
+				console.log('Error occured in downloading index.js file due to:'+error);
+			}
+			else{
+				console.log("File delivered....");
+			}
+		});
+		
+});
+
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
