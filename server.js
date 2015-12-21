@@ -55,11 +55,18 @@ var IncCounter=mongoose.model("IncCounter",inccount);
 
 //Shop 
 var shop=new Schema({
-	shop_id:Number,shop_name:String,shop_status:Boolean,shop_mobile_number:Number,shop_address:String,location_id:Number,shop_description:String,
+	shop_id:Number,shop_name:String,shop_timing:String,shop_status:Boolean,shop_mobile_number:Number,shop_address:String,location_id:Number,shop_description:String,
 	shop_item:[{item:String}],shop_rate:Number,shop_bitmap_url:String,category_id:Number,sub_category_id:Number,date:String
 });
 
 var Shop=mongoose.model("Shop",shop);
+
+
+var kk=function(){
+ counterOfTheApp("shop",Shop);
+};
+//kk();
+
 
 //location // done 
 var location=new Schema({
@@ -106,10 +113,7 @@ var ads=new Schema({
 
 var Ads=mongoose.model("Ads",ads);
 
-var kk=function(){
- adsInsert("ads",Ads);
-};
-//kk();
+
 
 //incrementcounteroftheapp
 
@@ -221,7 +225,7 @@ function counterOfTheApp(collectionType , Object ){
 		if(doc[globalCounter].sub_category){
 			SubCategory.find({category_id:doc[globalCounter].category_id},function(error,docc){
 				SubCategoryShopCount.findOne({subcategory_id:docc[subcount].sub_category_id},function(e,da){
-					temp(Object,collection.counter,"Apple",true,9935018328,"126 park vanue hall road",1009,"Apple need really description",[{item:"iphone"}],
+					temp(Object,collection.counter,"Apple","10 Am to 9PM Monday-Saturday Sunday Close",true,9935018328,"126 park vanue hall road",1009,"Apple need really description",[{item:"iphone"}],
 					2,urlBase+"shop.jpg",doc[globalCounter].category_id,docc[subcount].sub_category_id);
 					if(ref == da.count)
 					{
@@ -244,7 +248,7 @@ function counterOfTheApp(collectionType , Object ){
 		else{
 			CategoryShopCount.findOne({category_id:doc[globalCounter].category_id},function(eo,dd){
 				
-temp(Object,collection.counter,"Apple",true,9935018328,"126 park vanue hall road",1009,"Apple need really description",[{item:"iphone"}],
+temp(Object,collection.counter,"Apple","10 Am to 9PM Monday-Saturday Sunday Close",true,9935018328,"126 park vanue hall road",1009,"Apple need really description",[{item:"iphone"}],
 2,urlBase+"shop.jpg",doc[globalCounter].category_id,0);
 				
 				flag3=true;
@@ -283,8 +287,8 @@ temp(Object,collection.counter,"Apple",true,9935018328,"126 park vanue hall road
 			
 
 }
-function temp(Object,shop_id,shop_name,shop_status,shop_mobile_number,shop_address,location_id,shop_description,shop_item,shop_rate,shop_bitmap_url,category_id,sub_category_id){
-	var data=new Object({shop_id:shop_id,shop_name:shop_name,shop_status:shop_status,shop_mobile_number:shop_mobile_number,shop_address:shop_address,location_id:location_id
+function temp(Object,shop_id,shop_name,shop_timing,shop_status,shop_mobile_number,shop_address,location_id,shop_description,shop_item,shop_rate,shop_bitmap_url,category_id,sub_category_id){
+	var data=new Object({shop_id:shop_id,shop_name:shop_name,shop_timing:shop_timing,shop_status:shop_status,shop_mobile_number:shop_mobile_number,shop_address:shop_address,location_id:location_id
 	,shop_description:shop_description,shop_item:shop_item,shop_rate:shop_rate,shop_bitmap_url:shop_bitmap_url,category_id:category_id,sub_category_id:sub_category_id,date:currentDate()
 	});
 	//console.log("DATA %s",data);
@@ -438,7 +442,7 @@ app.post("/categoryshopcount/",function(req,res){
 app.post("/ads/",function(req,res){
 	Ads.find({},function(error,doc){
 		res.json(doc);
-		console.log(doc);
+		//console.log(doc);
 	});
 });
 
@@ -463,6 +467,63 @@ app.get('/bitmap/ads/ads.jpg',function(req,res,next){
 		
 });
 
+//reqquest for shop
+app.post("/shop/",function(req,res){
+	Shop.find({shop_id:(Number)(req.body.shop_id)},function(error,data){
+		res.json(data);
+	});
+});
+
+//request for shop image
+app.get('/bitmap/shop/shop.jpg',function(req,res,next){
+	var options={root:__dirname+'/bitmap/shop/',
+		dotfiles:'allow',
+		headers:{
+			'x-timestamp':Date.now(),
+			'x-sent':true
+		}
+		};
+		res.sendFile('shop.jpg',options,function(error){
+			if(error)
+			{
+				console.log('Error occured in downloading index.js file due to:'+error);
+			}
+			else{
+				console.log("File delivered....");
+			}
+		});
+		
+});
+//request foe subcategory
+app.post('/subcategory/',function(req,res){
+	SubCategory.find({category_id:(Number)(req.body.category_id)},function(error,doc){
+		res.json(doc);
+	});
+});
+
+//request for suncategoryshopcount
+app.post('/subcategoryshopcount/',function(req,res){
+	SubCategoryShopCount.findOne({subcategory_id:(Number)(req.body.subcategory_id)},function(error,doc){
+		res.json(doc);
+		console.log(doc);
+	});
+});
+
+//request for shoplist
+app.post('/shoplist/',function(req,res){
+	Shop.find({category_id:(Number)(req.body.category_id)},function(error,doc){
+		res.json(doc);
+		console.log(doc);
+	});
+});
+
+//request for shop list by sub category
+app.post('/subshoplist',function(req,res){
+	Shop.find({sub_category_id:(Number)(req.body.sub_category_id)},function(error,doc){
+		res.json(doc);
+		console.log(doc);
+	});
+});
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
