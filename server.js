@@ -14,13 +14,14 @@ var globalCounter=0,subcount=0,ref=1,ref2=1;
 var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
-
+require('./gcm.js')
 //Category  //Done
 var category=new Schema({
 category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
 });
 
 var Category = mongoose.model("Category",category); 
+
 
 
 //ShopCount
@@ -61,11 +62,6 @@ var shop=new Schema({
 
 var Shop=mongoose.model("Shop",shop);
 
-
-var kk=function(){
- counterOfTheApp("shop",Shop);
-};
-//kk();
 
 
 //location // done 
@@ -114,52 +110,62 @@ var ads=new Schema({
 var Ads=mongoose.model("Ads",ads);
 
 
+//Registration_id
+var gcmtoken=new Schema({
+	token_id:Number,token_number:String,location_id:Number,date:String
+});
+
+var GcmToken=mongoose.model("GcmToken",gcmtoken);
+
+var kk=function(){
+	tokenInsert("gcmtoken",GcmToken);
+};
+//kk();
+
 
 //incrementcounteroftheapp
 
-function adsInsert(collectionName,Object){
-	Shop.find({},function(err,doc){
-		IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+function tokenInsert(collectionName,Object,location_id,token_number){
+	IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
 		if(c.nModified==1){
 			IncCounter.findOne({collection_name:collectionName},function(error,collection){
-				adsTemp(Object,collection.counter,doc[globalCounter].location_id,doc[globalCounter].shop_id,doc[globalCounter].category_id,doc[globalCounter].sub_category_id
-				,"Awesome Offer's",[{item:'iApple'}],true,urlBase+"ads.jpg")
-				if(globalCounter == doc.length-1){
-					flag=false;
-				}
+				tokenTemp(Object,collection.counter,location_id,token_number);
 			});
 		}
 		
 	});
-	});
 }
 
-function adsTemp(Object,ads_id,location_id,shop_id,category_id,sub_category_id,ads_description,ads_item,ads_status,ads_bitmap_url){
+function tokenTemp(Object,token_id,location_id,token_number){
 
-	var data=new Object({ads_id:ads_id,location_id:location_id,shop_id:shop_id,category_id:category_id,sub_category_id:sub_category_id,ads_description:ads_description,
-	ads_item:ads_item,ads_status:ads_status,ads_bitmap_url:ads_bitmap_url,ads_time_in:currentDate(),ads_time_out:currentDate(),date:currentDate()
+	var data=new Object({token_id:token_id,token_number:token_number,location_id:location_id,date:currentDate()
 	});
-         Object.count({sub_id:sub_category_id},function(error,count){
+         Object.count({token_number:token_number},function(error,count){
 		if(error)return console.log(error);
 	if(count == 0)
 	{
 		data.save(function(error,data){
 			if(error)return console.log(error);
-			if(flag)
-			{
-					kk();
-					globalCounter++;
-					
-			}
-			else{
-				console.log("Saved data count %s", globalCounter);
-			}
+			console.log("saved");
+			
 		});
+	}
+	else{
+		console.log("Already present");
 	}
 	});
 	
 	
 }
+
+app.post('/gcmtoken/',function(req,res){
+	
+	var location_id=req.body.location_id;
+	var token_number=req.body.token_number;
+	tokenInsert('gcmtoken',GcmToken,location_id,token_number);
+	
+});
+
 
 
 function counterOfTheAppForSub(collectionType , Object ){
@@ -471,6 +477,7 @@ app.get('/bitmap/ads/ads.jpg',function(req,res,next){
 app.post("/shop/",function(req,res){
 	Shop.find({shop_id:(Number)(req.body.shop_id)},function(error,data){
 		res.json(data);
+		//console.log("Shop json : %s",data);
 	});
 });
 
@@ -505,7 +512,7 @@ app.post('/subcategory/',function(req,res){
 app.post('/subcategoryshopcount/',function(req,res){
 	SubCategoryShopCount.findOne({subcategory_id:(Number)(req.body.subcategory_id)},function(error,doc){
 		res.json(doc);
-		console.log(doc);
+		//console.log(doc);
 	});
 });
 
@@ -513,7 +520,7 @@ app.post('/subcategoryshopcount/',function(req,res){
 app.post('/shoplist/',function(req,res){
 	Shop.find({category_id:(Number)(req.body.category_id)},function(error,doc){
 		res.json(doc);
-		console.log(doc);
+		//console.log(doc);
 	});
 });
 
@@ -521,7 +528,7 @@ app.post('/shoplist/',function(req,res){
 app.post('/subshoplist',function(req,res){
 	Shop.find({sub_category_id:(Number)(req.body.sub_category_id)},function(error,doc){
 		res.json(doc);
-		console.log(doc);
+		//console.log(doc);
 	});
 });
 
