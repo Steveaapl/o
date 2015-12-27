@@ -14,7 +14,7 @@ var globalCounter=0,subcount=0,ref=1,ref2=1;
 var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
-require('./gcm.js')
+//require('./gcm.js')
 //Category  //Done
 var category=new Schema({
 category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String

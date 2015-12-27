@@ -26,7 +26,9 @@ var data = {
   'priority':'high',
   'collapse_key':'non-collapsible',
   "data":{
-    "message":"What a Dick Suck Puss","title":"My Title"
+          "offerDescription":"This is an offer on Apple iphone 5s,Hurry up offer is for limited time",
+          "offerPosterUri":"http://192.168.0.113:15437/bitmap/shop/shop.jpg",
+          "offerTitle":"Hello User"
     },
     "notification":{
       'body':"Hello Richie",
