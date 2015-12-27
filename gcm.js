@@ -28,7 +28,8 @@ var data = {
   "data":{
           "offerDescription":"This is an offer on Apple iphone 5s,Hurry up offer is for limited time",
           "offerPosterUri":"http://192.168.0.113:15437/bitmap/shop/shop.jpg",
-          "offerTitle":"Hello User"
+          "offerContent":"Love is Awesome",
+          "offerTitle":"Apple Inc. is an American multinational technology company headquartered in Cupertino ,"
     },
     "notification":{
       'body':"Hello Richie",
