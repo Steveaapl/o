@@ -14,6 +14,8 @@ var globalCounter=0,subcount=0,ref=1,ref2=1;
 var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
+var global1=0,global2=0,global3=0;
+var flg;
 //require('./gcm.js')
 //Category  //Done
 var category=new Schema({
@@ -21,8 +23,6 @@ category_id:Number,category_name:String,category_bitmap_url:String,category_symb
 });
 
 var Category = mongoose.model("Category",category); 
-
-
 
 //ShopCount
 var categoryshopcount=new Schema({
@@ -37,7 +37,6 @@ var subcategory=new Schema({
 });
 
 var SubCategory=mongoose.model("SubCategory",subcategory);
-
 
 //subshopcount
 var subcategoryshopcount=new Schema({
@@ -72,7 +71,7 @@ var location=new Schema({
 var Location=mongoose.model("Location",location);
 
 // Area  //done
-var area= new  Schema({
+ var area= new  Schema({
 	city_id:Number,
 	area_id:Number,
 	area_name:String,
@@ -117,13 +116,91 @@ var gcmtoken=new Schema({
 
 var GcmToken=mongoose.model("GcmToken",gcmtoken);
 
+
+
+var product=new Schema({
+	product_id:Number,product_name:String,product_shop_id:Number,product_price:String,product_description:String,product_bitmap_url:String,
+	product_offer:String,date:String
+});
+
+var Product = mongoose.model("Product",product);
+
+var searchquery=new Schema({query_id:Number,query_name:String,type_of:String,type_id:Number,type_keyword:[{keyword:String}],date:String});
+
+var SearchQuery= mongoose.model("SearchQuery",searchquery);
+
 var kk=function(){
-	tokenInsert("gcmtoken",GcmToken);
+	queryInsert("searchquery",SearchQuery);
 };
 //kk();
 
-
 //incrementcounteroftheapp
+
+function queryInsert(collectionName,Object){
+	IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+
+if(c.nModified==1){
+	IncCounter.findOne({collection_name:collectionName},function(error,dbb){
+		queryTemp(Object,dbb.counter);
+	});
+}
+
+	});
+}
+
+function queryTemp(Object,query_id){
+    
+    var keyword =[{keyword:'milk'},{keyword:'strong'}]
+
+var data = new Object({
+	query_id:query_id,query_name:'milk',type_of:'product',type_id:query_id,type_keyword:keyword,date:currentDate()
+});
+
+Object.count({query_id:query_id},function(error,count){
+   if(error) return console.log(error)
+   if(count==0){
+       data.save(function(error,da){
+          if(error)return console.log(error);
+          console.log("Query Inserted"); 
+       });
+   } 
+});
+
+}
+
+function productInsert(collectionName,Object){
+	IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+
+if(c.nModified==1){
+	IncCounter.findOne({collection_name:collectionName},function(error,dbb){
+		productTemp(Object,dbb.counter);
+	});
+}
+
+	});
+}
+
+function productTemp(Object,product_id){
+    
+
+var data = new Object({
+	product_id:product_id,product_name:"smartphone",product_shop_id:product_id,product_price:"5015",product_description:"Awesome android OS",product_bitmap_url:"null"
+    ,product_offer:"No offer",date:currentDate()
+});
+
+Object.count({product_id:product_id},function(error,count){
+   if(error) return console.log(error)
+   if(count==0){
+       data.save(function(error,da){
+          if(error)return console.log(error);
+          console.log("Product Inserted"); 
+       });
+   } 
+});
+
+}
+
+
 
 function tokenInsert(collectionName,Object,location_id,token_number){
 	IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
@@ -530,6 +607,79 @@ app.post('/subshoplist',function(req,res){
 		res.json(doc);
 		//console.log(doc);
 	});
+});
+
+//requist for search 
+app.post('/searchquery/',function(req,res){
+   var query=req.body.query.trim();
+    var dataArray=new Array();
+    allSearch(query);
+    function allSearch(searchquery){
+        SearchQuery.find({},function(error,doc){
+            if(error)return console.log("Error %s " ,error);
+            
+            if(global1<doc.length){
+                if(global2 < doc[global1].type_keyword.length){
+                    if(searchquery == doc[global1].type_keyword[global2].keyword){
+                        if(doc[global1].type_of=="product"){
+                            Product.findOne({product_id:doc[global1].type_id},function(errp,docc){
+                                if(errp)return console.log("Error %s",errp);
+                                dataArray.push(docc);
+                             //   console.log("DATA1");
+                            });
+                        }
+                        else{
+                            Shop.findOne({shop_id:doc[global1].type_id},function(errs,doccc){
+                               if(errs)return console.log("Error %s",errs);
+                               dataArray.push(doccc); 
+                              // console.log("DATA2");
+                            });
+                        }
+                        global2=doc[global1].type_keyword.length;
+                    }
+                    global2++;
+                    if(global2 < doc[global1].type_keyword.length){
+                       allSearch(searchquery);
+                    }
+                    else{
+                        global2=0;
+                        global1++;
+                        allSearch(searchquery);
+                    }
+                    
+                }
+               
+            }
+            else{
+                if(dataArray.length == 0)
+                {
+                    global1=0;
+                    global2=0;
+                   
+                   if(query.indexOf(" ") != -1){
+                       var queryArray = query.split(" ");
+                       if(global3<queryArray.length){
+                           allSearch(queryArray[global3]);
+                           global3++;
+                       }
+                       else{
+                           res.send("No data");
+                           global3=0;
+                       }
+                   }
+                   
+                    //allSearch();
+                }
+                else{
+                    global1=0;
+                    global2=0;
+                    res.json(dataArray);
+                    global3=0;
+                }
+                
+            }
+        })
+    }
 });
 
 app.listen(15437,function(){
