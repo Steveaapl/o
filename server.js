@@ -15,7 +15,7 @@ var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
 var global1=0,global2=0,global3=0;
-var flg;
+
 //require('./gcm.js')
 //Category  //Done
 var category=new Schema({
@@ -250,8 +250,7 @@ function counterOfTheAppForSub(collectionType , Object ){
 	Category.find({},function(error,collarray){
 				if(collarray[globalCounter].sub_category)
 			{
-				ref=collarray.length;
-				
+			   	ref=collarray.length;
 				  IncCounter.update({collection_name:collectionType},{$inc:{counter:1}},{multi:false},function(error,c){
 		if(c.nModified==1)
 		{
@@ -611,7 +610,7 @@ app.post('/subshoplist',function(req,res){
 
 //requist for search 
 app.post('/searchquery/',function(req,res){
-   var query=req.body.query.trim();
+    var query=req.body.query.trim();
     var dataArray=new Array();
     allSearch(query);
     function allSearch(searchquery){
@@ -651,7 +650,7 @@ app.post('/searchquery/',function(req,res){
                
             }
             else{
-                if(dataArray.length == 0)
+                if(dataArray.length == 0 || flag=true)
                 {
                     global1=0;
                     global2=0;
