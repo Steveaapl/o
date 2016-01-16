@@ -1,4 +1,5 @@
 var express=require('express');
+var http=require('https');
 var parser=require('body-parser');
 var mongodb=require('mongodb').MongoClient;
 var app =express();
@@ -15,8 +16,12 @@ var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
 var global1=0,global2=0,global3=0;
-
+var flagForConnection=false;
 //require('./gcm.js')
+
+
+
+
 //Category  //Done
 var category=new Schema({
 category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
@@ -80,15 +85,7 @@ var Location=mongoose.model("Location",location);
 
 var Area=mongoose.model('Area',area);
 
-
-
 //Category //done
-
-
-
-
-
-
 
 //City  // Done
 var city=new  Schema({
@@ -107,14 +104,6 @@ var ads=new Schema({
 });
 
 var Ads=mongoose.model("Ads",ads);
-
-
-//Registration_id
-var gcmtoken=new Schema({
-	token_id:Number,token_number:String,location_id:Number,date:String
-});
-
-var GcmToken=mongoose.model("GcmToken",gcmtoken);
 
 
 
@@ -201,49 +190,52 @@ Object.count({product_id:product_id},function(error,count){
 }
 
 
+//Registration_id
+var gcmtoken=new Schema({
+	token_id:Number,token_number:String,date:String
+});
 
-function tokenInsert(collectionName,Object,location_id,token_number){
-	IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
-		if(c.nModified==1){
-			IncCounter.findOne({collection_name:collectionName},function(error,collection){
-				tokenTemp(Object,collection.counter,location_id,token_number);
-			});
-		}
-		
-	});
-}
-
-function tokenTemp(Object,token_id,location_id,token_number){
-
-	var data=new Object({token_id:token_id,token_number:token_number,location_id:location_id,date:currentDate()
-	});
-         Object.count({token_number:token_number},function(error,count){
-		if(error)return console.log(error);
-	if(count == 0)
-	{
-		data.save(function(error,data){
-			if(error)return console.log(error);
-			console.log("saved");
-			
-		});
-	}
-	else{
-		console.log("Already present");
-	}
-	});
-	
-	
-}
+var GcmToken=mongoose.model("GcmToken",gcmtoken);
 
 app.post('/gcmtoken/',function(req,res){
-	
-	var location_id=req.body.location_id;
 	var token_number=req.body.token_number;
-	tokenInsert('gcmtoken',GcmToken,location_id,token_number);
-	
+    res.end("DONE");
+    console.log("DONE");
+	tokenInsert('gcmtoken',GcmToken,token_number);
 });
 
 
+
+function tokenInsert(collectionName,Object,token_number){
+       Object.find({token_number:token_number},function(error,dock){
+		if(error)return console.log(error);
+	if(dock.length == 0)
+	{
+        IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+		if(c.nModified==1){
+			IncCounter.findOne({collection_name:collectionName},function(error,collection){
+                var data=new Object({token_id:collection.counter,token_number:token_number,date:currentDate()
+	});
+		data.save(function(error,data){
+			if(error)return console.log(error);
+            var json = {type_of:1,data:{token_id:collection.counter}};
+            gcmForUserId(json,token_number);
+            console.log("Sended and Saved");
+		});
+			});
+		}
+	});
+    
+	}
+	else{
+	     var json = {type_of:1,data:{token_id:dock[0].token_id}};
+            gcmForUserId(json,token_number);
+            console.log("Re Sended");
+	}
+	});
+    
+    
+}
 
 function counterOfTheAppForSub(collectionType , Object ){
 
@@ -650,7 +642,7 @@ app.post('/searchquery/',function(req,res){
                
             }
             else{
-                if(dataArray.length == 0 || flag=true)
+                if(flagForConnection || dataArray.length == 0)
                 {
                     global1=0;
                     global2=0;
@@ -658,10 +650,16 @@ app.post('/searchquery/',function(req,res){
                    if(query.indexOf(" ") != -1){
                        var queryArray = query.split(" ");
                        if(global3<queryArray.length){
+                       	   if(global3 == queryArray.length-1)
+                       	   	flagForConnection=false;
+                       	   else
+                       	   	flagForConnection=true;
                            allSearch(queryArray[global3]);
                            global3++;
+                           console.log(global3);
                        }
                        else{
+                           flagForConnection = false;
                            res.send("No data");
                            global3=0;
                        }
@@ -674,12 +672,277 @@ app.post('/searchquery/',function(req,res){
                     global2=0;
                     res.json(dataArray);
                     global3=0;
+                    console.log("E");
                 }
                 
             }
         })
     }
 });
+
+app.post('/locationthroughgps/',function(req,res){
+
+
+var locationOfUser = req.body.location;
+
+console.log(locationOfUser);
+
+Area.find({},function(error,doc){
+
+for(var i=0;i<doc.length;i++){
+
+var str = locationOfUser.toLowerCase();
+
+var area = doc[i].area_name.toLowerCase().trim();
+
+var result = str.search(area);
+
+if(result != -1){
+    var json = {city_id:doc[i].city_id,area_id:doc[i].area_id,location:locationOfUser,success:1};
+    res.json(json);
+    return ;
+}
+else{
+    if(i == doc.length-1){
+        var jsonp = {location:locationOfUser,success:0};
+        res.json(jsonp);
+        console.log("No data");
+    }
+}
+
+}
+
+});
+1
+});
+
+//requestforuserNameDataEntry
+var userdataflag = false;
+var userObjectStore = new Array();
+var user ;
+var UserInfoCollection ;
+var collecton_name ;
+app.post('/userNameDataEntry/',function(req,res){
+   var user_id = req.body.user_id;
+   var user_name = req.body.user_name;
+   var user_email= req.body.user_email;
+   console.log("%s%s%s",user_id,user_email,user_name);
+   
+   res.send("Hello");
+   
+   //username
+     
+       if(userdataflag){
+     
+              
+                   user = userObjectStore[0].user;
+                   UserInfoCollection = userObjectStore[0].userinfocollection;   
+                   console.log("Hipo");    
+               
+           
+       }
+       else{
+          user = new Schema({
+            data:String,type_of:String
+       });
+        collecton_name = "User"+user_id ;
+       UserInfoCollection  = mongoose.model(collecton_name,user);       
+       var dd={user:user,userinfocollection:UserInfoCollection};
+       userObjectStore.push(dd);
+       userdataflag=true;
+       }   
+   
+     UserInfoCollection.findOne({type_of:'user_name'},function(er,doc){
+     if(doc == null){
+       UserInfoCollection.update({type_of:'user_name'},{data:user_name},{multi:true},function(error,c){
+       if(error)return console.log("Error::%s",error);
+      if(c.nModified==0){
+          var data = new UserInfoCollection({data:user_name,type_of:'user_name'});
+          data.save(function(err){
+             if(err)return console.log("Error:%s",err);
+             console.log("Saved User Name"); 
+          });
+      }
+      else{
+          console.log("Updated:%s User Name",c.nModified);
+      }
+   });
+     }
+     else{
+         if(doc.data == user_name)
+         {
+             console.log("Same Name");
+         }
+         else{
+          UserInfoCollection.update({type_of:'user_name'},{data:user_name},{multi:true},function(error,c){
+       if(error)return console.log("Error::%s",error);
+      if(c.nModified==0){
+          var data = new UserInfoCollection({data:user_name,type_of:'user_name'});
+          data.save(function(err){
+             if(err)return console.log("Error:%s",err);
+             console.log("Saved User Name"); 
+          });
+      }
+      else{
+          console.log("Updated:%s User Name",c.nModified);
+      }
+   });
+         }
+     }
+     
+       
+   });
+   
+   
+if(user_email.length > 4 )
+{
+    
+     //useremail
+      if(userdataflag){
+     
+              
+                   user = userObjectStore[0].user;
+                   UserInfoCollection = userObjectStore[0].userinfocollection;   
+                   console.log("Hipo");    
+               
+           
+       }
+       else{
+          user = new Schema({
+            data:String,type_of:String
+       });
+       collecton_name = "User"+user_id ;
+       UserInfoCollection  = mongoose.model(collecton_name,user);       
+       var ddd={user:user,userinfocollection:UserInfoCollection};
+       userObjectStore.push(ddd);
+       userdataflag=true;
+       }
+   UserInfoCollection.findOne({type_of:'user_email'},function(er,doc){
+       
+     if(doc == null){
+          UserInfoCollection.update({type_of:'user_email'},{data:user_email},{multi:true},function(error,c){
+       if(error)return console.log("Error::%s",error);
+      if(c.nModified == 0){
+          var data = new UserInfoCollection({data:user_email,type_of:'user_email'});
+          data.save(function(err){
+             if(err)return console.log("Error:%s",err);
+             console.log("Saved User Email"); 
+          });
+      }
+      else{
+          console.log("Updated:%s User Email",c.nModified);
+      }
+   });
+     }
+     else{
+         if(doc.data == user_email){
+             console.log("Same Email");
+         }
+         else{
+              UserInfoCollection.update({type_of:'user_email'},{data:user_email},{multi:true},function(error,c){
+       if(error)return console.log("Error::%s",error);
+      if(c.nModified == 0){
+          var data = new UserInfoCollection({data:user_email,type_of:'user_email'});
+          data.save(function(err){
+             if(err)return console.log("Error:%s",err);
+             console.log("Saved User Email"); 
+          });
+      }
+      else{
+          console.log("Updated:%s User Email",c.nModified);
+      }
+   });
+         }
+     }
+     
+       
+   });
+  
+
+}
+
+   
+   
+});
+
+
+
+//gcmForSendingUserId
+
+function gcmForUserId(datatobesended,token){
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":datatobesended
+    },
+    "notification":{
+      'body':"Hello Richie",
+      'title':'Yupo'
+    },
+  "to":token
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
+
+
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
