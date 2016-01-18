@@ -2,21 +2,30 @@ var express=require('express');
 var http=require('https');
 var parser=require('body-parser');
 var mongodb=require('mongodb').MongoClient;
+var multer  = require('multer')
+var fs =require('fs')
+var gcloud = require('gcloud');
 var app =express();
 var url="mongodb://localhost:27017/omoyo";
 var json =new Array();
 var parse=require('url');
 var mongoose=require('mongoose');
 mongoose.connect('mongodb://localhost:27017/omoyo');
-var jsonparser=parser.json();
-app.use(jsonparser);
-app.use(parser.urlencoded({extended:true}));
+app.use(parser.json({limit: '50mb'}));
+app.use(parser.urlencoded({limit: '50mb',extended:true}));
 var globalCounter=0,subcount=0,ref=1,ref2=1;
 var flag=true,flag1=true,flag2=true,flag3=true;
 var urlBase="http://192.168.0.109/bitmap/ads/"
 var Schema=mongoose.Schema;
 var global1=0,global2=0,global3=0;
 var flagForConnection=false;
+var userdataflag = false;
+var userObjectStore = new Array();
+var user ;
+var UserInfoCollection ;
+var collecton_name ;
+
+
 //require('./gcm.js')
 
 
@@ -717,11 +726,6 @@ else{
 });
 
 //requestforuserNameDataEntry
-var userdataflag = false;
-var userObjectStore = new Array();
-var user ;
-var UserInfoCollection ;
-var collecton_name ;
 app.post('/userNameDataEntry/',function(req,res){
    var user_id = req.body.user_id;
    var user_name = req.body.user_name;
@@ -861,9 +865,217 @@ if(user_email.length > 4 )
 
 }
 
+GcmToken.findOne({token_id:user_id},function(error,doc){
+   
+    var json = {type_of:2,data:{user_email:user_email,user_name:user_name}};
+            gcmForUserId(json,doc.token_number);
+    
+});
+
+
    
    
 });
+
+//reqforprofilepic
+app.post('/userProfilePicDataEntry/',function(req,res){
+   var binary64Encoded = req.body.user_profile_pic_binary64encoded;
+   var user_id = req.body.user_id;
+    if(userdataflag){
+     
+              
+                   user = userObjectStore[0].user;
+                   UserInfoCollection = userObjectStore[0].userinfocollection;   
+                   console.log("Hipo");    
+               
+           
+       }
+       else{
+          user = new Schema({
+            data:String,type_of:String
+       });
+       collecton_name = "User"+user_id ;
+       UserInfoCollection  = mongoose.model(collecton_name,user);       
+       var ddd={user:user,userinfocollection:UserInfoCollection};
+       userObjectStore.push(ddd);
+       userdataflag=true;
+       }
+       
+       UserInfoCollection.update({type_of:'user_profile_pic'},{data:binary64Encoded},{multi:false},function(error,c){
+           if(c.nModified == 0){
+               var data = new UserInfoCollection({data:binary64Encoded,type_of:'user_profile_pic'});
+               data.save(function(err,doc){
+                   console.log("Profile Pic Saved !")
+                   res.send("O.K");
+               });
+           }
+           else{
+               console.log("Profile Pic Updated!");
+               res.send("O.K");
+           }
+       })
+       
+       
+});
+
+
+app.post('/userMobileNumberDataEntry/',function(req,res){
+   
+   var user_id =req.body.user_id;
+   var user_mobile_number=req.body.user_mobile_number;
+   res.send("O.K");
+    if(userdataflag){
+     
+              
+                   user = userObjectStore[0].user;
+                   UserInfoCollection = userObjectStore[0].userinfocollection;   
+                   console.log("Hipo");    
+               
+           
+       }
+       else{
+          user = new Schema({
+            data:String,type_of:String
+       });
+       collecton_name = "User"+user_id ;
+       UserInfoCollection  = mongoose.model(collecton_name,user);       
+       var ddd={user:user,userinfocollection:UserInfoCollection};
+       userObjectStore.push(ddd);
+       userdataflag=true;
+       }
+   
+    UserInfoCollection.findOne({type_of:'user_mobile_number'},function(er,doc){
+       
+     if(doc == null){
+                        
+               var data = new UserInfoCollection({data:user_mobile_number,type_of:'user_mobile_number'});
+               data.save(function(err,doc){
+                   console.log("Mobile Number Saved!")
+               });
+        
+     }
+     else{
+         if(doc.data == user_mobile_number){
+             console.log("Same Mobile Number");
+         }
+         else{
+         UserInfoCollection.update({type_of:'user_mobile_number'},{data:user_mobile_number},{multi:false},function(error,c){
+           if(c.nModified == 0){
+              
+           }
+           else{
+               console.log("Mobile Number Updated!");
+               res.send("O.K");
+           }
+       })
+         }
+     }
+     
+       
+   });
+   
+    
+});
+//Offer_pic_upload
+app.post('/offerDataEntry/', function (req, res) {
+    var description_of_offer;
+    var offer_code;
+    var storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, __dirname+'/bitmap/')
+  },
+  filename: function (req, file, cb) {
+      description_of_offer = req.body.description_of_offer
+      offer_code = req.body.offer_code
+    cb(null, req.body.user_id+"#"+req.body.offer_code+file.originalname)
+  }
+})
+
+var upload = multer({ storage: storage }).single('offerpic');
+    
+  upload(req, res, function (err) {
+    if (err) {
+      console.log("ERROR WHILE UPLOADING ... %s",err)
+      return
+    }
+    offerPicUploadToGCS(__dirname+"/bitmap/"+req.body.user_id+"#"+offer_code+req.file.originalname , req.body.user_id , req.body.description_of_offer , req.body.offer_code)
+   console.log(req.file.filename);
+  //  console.log(req.file.mimetype);
+  //  console.log(req.file.fieldname);
+  //  console.log(req.file.originalname);
+   // console.log(req.file.encoding);
+   // console.log(req.file.size);
+   // console.log(req.file.destination);
+   //// console.log(req.file.path);
+  //  console.log(req.file.buffer);
+    res.send("O.K");
+    console.log("pic uploaded to server");
+  })
+})
+
+
+function offerPicUploadToGCS(filename , user_id ,description_of_offer , offer_code){
+    var gcs = gcloud.storage({
+  projectId: 'omoyo-1168',
+  keyFilename: __dirname+'/keyfile.json'
+});
+
+var bucket = gcs.bucket('offerpicupload');
+
+bucket.upload(filename, function(err, file) {
+  if (err) {
+    console.log("Error uploading ! %s",err) ;
+    return
+  }
+   console.log("File Uploaded To GCS") ;
+ 
+   fs.unlink(filename,function(error){
+      if(error){
+          console.log("Deletion to done due to %s",error);
+          return
+      } 
+      console.log("Done Deletion !");
+     //2
+      save_offer_description(filename,user_id,description_of_offer,offer_code)
+   });
+   
+});
+}
+
+//2
+
+function save_offer_description(filename,user_id,offer_description,offer_code){
+    if(userdataflag){
+     
+              
+                   user = userObjectStore[0].user;
+                   UserInfoCollection = userObjectStore[0].userinfocollection;   
+                   console.log("Hipo");    
+               
+           
+       }
+       else{
+          user = new Schema({
+            data:String,type_of:String
+       });
+       collecton_name = "User"+user_id ;
+       UserInfoCollection  = mongoose.model(collecton_name,user);       
+       var ddd={user:user,userinfocollection:UserInfoCollection};
+       userObjectStore.push(ddd);
+       userdataflag=true;
+       }
+       
+       var json = {offer_file_url:'https://console.cloud.google.com/m/cloudstorage/b/offerpicupload/o/'+filename,offer_code:offer_code,offer_description:offer_description,date:currentDate}
+       var data = new UserInfoCollection({data:JSON.stringify(json),type_of:'offer_upload'});
+               data.save(function(err,doc){
+                   if(err){
+                       console.log("Error in saving %s",err);
+                       return
+                   }
+                   console.log("Offer  Saved!")
+               });
+       
+}
 
 
 
@@ -941,7 +1153,88 @@ req.end();
 
 }
 
+var arrayForToken = new Array();
+GcmToken.find({}).select({token_number:1,_id:0}).exec(function(error,doc){
+  for(var i=0;i<doc.length;i++){
+   arrayForToken.push(doc[i].token_number);
+      if(i== doc.length-1){
+          var json = {type_of:3,data:{smswtf:'HP'}};
+      //  gcmForSmswtf(json)
+      }
+  }
+});
 
+
+function gcmForSmswtf(json){
+    
+    
+    
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
 
 
 app.listen(15437,function(){
