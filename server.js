@@ -25,7 +25,6 @@ var user ;
 var UserInfoCollection ;
 var collecton_name ;
 
-
 //require('./gcm.js')
 
 
@@ -127,10 +126,56 @@ var searchquery=new Schema({query_id:Number,query_name:String,type_of:String,typ
 
 var SearchQuery= mongoose.model("SearchQuery",searchquery);
 
+
+var faq = new Schema({faq_id:Number,faq_question:String,faq_answer:String,date:String});
+
+var Faq = mongoose.model("Faq",faq);
+
+
 var kk=function(){
-	queryInsert("searchquery",SearchQuery);
+	faqInsert("faq",Faq);
 };
 //kk();
+
+function faqInsert(collectionName,Object){
+    
+    IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+
+if(c.nModified==1){
+	IncCounter.findOne({collection_name:collectionName},function(error,dbb){
+		faqTemp(Object,dbb.counter);
+	});
+}
+ if(c.nModified==0)
+		{
+			var data=new IncCounter({collection_name:collectionName,counter:1007});
+			data.save(function(error,co){
+				if(error)return console.log(error);
+				console.log("Collection %s saved",collectionName);
+			   //
+			});
+	
+		}
+	});
+    
+    
+   
+}
+
+function faqTemp(Object , faq_id){
+    var data = new Object({faq_id:faq_id,faq_question:"Who we can use the app ?",
+    faq_answer:"Just click the app and Ya after intalling it from Google play store"
+    ,date:currentDate()});
+    data.save(function(error,doc){
+       if(error){
+           console.log("Error %s",error);
+           return;
+       } 
+       else{
+           console.log("Done inserting 1");
+       }
+    });
+}
 
 //incrementcounteroftheapp
 
@@ -1025,6 +1070,15 @@ var bucket = gcs.bucket('offerpicupload');
 bucket.upload(filename, function(err, file) {
   if (err) {
     console.log("Error uploading ! %s",err) ;
+     fs.unlink(filename,function(error){
+      if(error){
+          console.log("Deletion to done due to %s",error);
+          return
+      } 
+      console.log("Done Deletion !");
+     //2
+      save_offer_description(filename,user_id,description_of_offer,offer_code)
+   });
     return
   }
    console.log("File Uploaded To GCS") ;
@@ -1160,14 +1214,238 @@ GcmToken.find({}).select({token_number:1,_id:0}).exec(function(error,doc){
       if(i== doc.length-1){
           var json = {type_of:3,data:{smswtf:'HP'}};
       //  gcmForSmswtf(json)
+         var   json1 = {type_of:4,data:{contact_number_of_OMOYoo:'9897433253'}};
+          
+         //  gcmForOmoyoContactNumber(json1)
+         
+         var   json2 = {type_of:5,data:{license_description:'Really you want the license.'}};
+          
+         // gcmForOmoyoLicenseDescription(json2)
+         
+        sendingFaqToUser();
+         
       }
   }
 });
 
+function sendingFaqToUser(){
+    Faq.find({},{faq_id:1,faq_question:1,faq_answer:1},function(error,doc){
+       var   json2 = {type_of:6,data:{data_for_faq:doc}};
+           gcmForOmoyoFaqUpload(json2);
+    });
+}
 
 function gcmForSmswtf(json){
     
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
+
+
+function gcmForOmoyoContactNumber(json){
     
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
+function gcmForOmoyoLicenseDescription(json){
+    
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
+
+function gcmForOmoyoFaqUpload(json){
     
 var data = {
   "collapseKey":"applice",
