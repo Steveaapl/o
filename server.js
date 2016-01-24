@@ -132,10 +132,46 @@ var faq = new Schema({faq_id:Number,faq_question:String,faq_answer:String,date:S
 var Faq = mongoose.model("Faq",faq);
 
 
+var coordinateOfShop = new Schema({coordinate_id:Number,location_id:Number,shop_id:Number,shop_longitude:String,shop_latitude:String});
+
+var CoordinateOfShop = mongoose.model("coordinateofshop",coordinateOfShop);
+
+
+
 var kk=function(){
 	faqInsert("faq",Faq);
 };
 //kk();
+
+var user_query = new Schema({query_id:Number,user_id:Number,user_query:String,date:String});
+
+var User_Query = mongoose.model('User_Query',user_query);
+
+app.post('/userSubmitingQuery/',function(req,res){
+   var user_id = req.body.user_id;
+   var user_query = req.body.user_query;
+   var collectionName = 'user_query';
+    IncCounter.update({collection_name:collectionName},{$inc:{counter:1}},{multi:false},function(error,c){
+
+if(c.nModified==1){
+	IncCounter.findOne({collection_name:collectionName},function(error,dbb){
+		 var data = new User_Query({query_id:dbb.counter,user_id:(Number)(user_id),user_query:user_query
+    ,date:currentDate()});
+    data.save(function(error,doc){
+       if(error){
+           console.log("Error %s",error);
+           return;
+       } 
+       else{
+           console.log("Done inserting 1");
+           res.send("O.K");
+       }
+    });
+	});
+}
+	});
+});
+
 
 function faqInsert(collectionName,Object){
     
@@ -726,7 +762,7 @@ app.post('/searchquery/',function(req,res){
                     global2=0;
                     res.json(dataArray);
                     global3=0;
-                    console.log("E");
+                    console.log(dataArray);
                 }
                 
             }
@@ -1131,6 +1167,68 @@ function save_offer_description(filename,user_id,offer_description,offer_code){
        
 }
 
+//quick_search
+app.post('/quickSearch/',function(req,res){
+   var quick_query = req.body.quick_query.trim();
+   console.log(quick_query);
+   var quick_result = new Array();
+   var filter_result = new Array();
+   SearchQuery.find({},function(error,doc){
+      if(error){
+          console.log("Error: %s",error);
+          return ;
+      }
+      for(var i =0 ; i<doc.length ; i++){
+          for(var j =0 ;j<doc[i].type_keyword.length;j++){
+              var keyword = doc[i].type_keyword[j].keyword ;
+         //     console.log(keyword)
+              if(keyword.indexOf(quick_query) != -1){
+              //  console.log(keyword);
+                 if(filter_result.indexOf(keyword.toLowerCase()) == -1){
+                     filter_result.push(keyword);
+                     console.log(keyword);
+                 }
+                  
+              //    
+               //   quick_result.push(json);
+                //  console.log(json)
+              }
+              
+          }
+          
+          
+   
+          
+          if(i==doc.length-1){
+              if(filter_result.length>0)
+              for(var t = 0 ; t<filter_result.length ; t++){
+                  var json ={result:filter_result[t]};
+                  quick_result.push(json);
+                  if(t == filter_result.length-1){
+                  res.json(quick_result);
+             //     console.log(quick_result);
+                  }
+              }   
+              else{
+                  quick_result.push({result:'No result \n Use other Keyword'});
+                  res.json(quick_result);
+                //  console.log(quick_result);
+              }    
+          }
+          
+      }
+   });
+});
+
+
+//cooordinate
+app.post("/coordinateOfShop/",function(req,res){
+    var location_id = req.body.location_id;
+    CoordinateOfShop.find({location_id:location_id},{_id:0,coordinate_id:0},function(err,doc){
+       res.json(doc); 
+    });
+});
+
 
 
 //gcmForSendingUserId
@@ -1212,8 +1310,8 @@ GcmToken.find({}).select({token_number:1,_id:0}).exec(function(error,doc){
   for(var i=0;i<doc.length;i++){
    arrayForToken.push(doc[i].token_number);
       if(i== doc.length-1){
-          var json = {type_of:3,data:{smswtf:'HP'}};
-      //  gcmForSmswtf(json)
+          var json = {type_of:3,data:{smswtf:'MM'}};
+    // gcmForSmswtf(json)
          var   json1 = {type_of:4,data:{contact_number_of_OMOYoo:'9897433253'}};
           
          //  gcmForOmoyoContactNumber(json1)
@@ -1222,7 +1320,7 @@ GcmToken.find({}).select({token_number:1,_id:0}).exec(function(error,doc){
           
          // gcmForOmoyoLicenseDescription(json2)
          
-        sendingFaqToUser();
+       // sendingFaqToUser();
          
       }
   }
@@ -1502,10 +1600,11 @@ var req=http.request(options , function(res){
                 data += chunk;
               //  console.log(chunk);
             });
-            res.on('end', respond);
-            res.on('close', respond);
-
-                console.log('Status:%s',res.statusCode);
+            
+                 res.on('end', respond);
+                 res.on('close', respond);
+                 
+                 console.log('Status:%s',res.statusCode);
               //   console.log('Headers:%s',JSON.stringify(res.headers));
 });
 
@@ -1513,7 +1612,6 @@ req.write(dataString);
 req.end();
 
 }
-
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
