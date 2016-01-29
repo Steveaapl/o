@@ -26,10 +26,7 @@ var UserInfoCollection ;
 var collecton_name ;
 
 //require('./gcm.js')
-
-
-
-
+console.log(currentDate());
 //Category  //Done
 var category=new Schema({
 category_id:Number,category_name:String,category_bitmap_url:String,category_symbol:String,category_item:[{item:String}],sub_category:Boolean,date:String
@@ -132,9 +129,10 @@ var faq = new Schema({faq_id:Number,faq_question:String,faq_answer:String,date:S
 var Faq = mongoose.model("Faq",faq);
 
 
-var coordinateOfShop = new Schema({coordinate_id:Number,location_id:Number,shop_id:Number,shop_longitude:String,shop_latitude:String});
 
-var CoordinateOfShop = mongoose.model("coordinateofshop",coordinateOfShop);
+var gpsposition = new Schema({gps_position_id:Number,location_id:Number,shop_id:Number,latitude:Number,longitude:Number,date:String});
+
+var GpsPosition = mongoose.model("gpsposition",gpsposition);
 
 
 
@@ -533,7 +531,7 @@ function tempForSub(Object,category_id,sub_category_id,sub_category_name,sub_cat
 
 function currentDate(){
 	var date=new Date();
-	return date.getDate()+":"+date.getUTCMonth()+":"+date.getUTCFullYear()+":"+date.getUTCHours()+":"+date.getUTCMinutes()+":"+date.getUTCSeconds();
+	return date.getDate()+":"+date.getMonth()+":"+date.getFullYear()+":"+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
 }
 
 //Get for city name // first hit shot
@@ -1224,7 +1222,7 @@ app.post('/quickSearch/',function(req,res){
 //cooordinate
 app.post("/coordinateOfShop/",function(req,res){
     var location_id = req.body.location_id;
-    CoordinateOfShop.find({location_id:location_id},{_id:0,coordinate_id:0},function(err,doc){
+   GpsPosition.find({location_id:location_id},{_id:0,coordinate_id:0},function(err,doc){
        res.json(doc); 
     });
 });
@@ -1322,6 +1320,10 @@ GcmToken.find({}).select({token_number:1,_id:0}).exec(function(error,doc){
          
        // sendingFaqToUser();
          
+         var tempJson = [{notification_description:'Hello'}]
+         var json7= {type_of:7,data:{system_notification:tempJson}}
+         
+       //  gcmForSystemNotification(json7)
       }
   }
 });
@@ -1612,6 +1614,148 @@ req.write(dataString);
 req.end();
 
 }
+
+
+function gcmForOmoyoLicenseDescription(json){
+    
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            res.on('end', respond);
+            res.on('close', respond);
+
+                console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
+
+function gcmForSystemNotification(json){
+    
+var data = {
+  "collapseKey":"applice",
+  "delayWhileIdle":true,
+  'priority':'high',
+  'collapse_key':'non-collapsible',
+  "data":{
+          "data":json
+    },
+  "registration_ids":arrayForToken
+};  
+var dataString =  JSON.stringify(data);
+
+var headers = {
+  'Host':'android.googleapis.com' ,
+  'Authorization' : 'key=AIzaSyDDktt4Gs4qFm8ln7HNLDETpaL_vn_-IzE',
+  'Content-Type' : 'application/json',
+  'Content-Length' : dataString.length
+};
+
+        
+var options = {
+        host: 'android.googleapis.com',
+        port: 443,
+        path: '/gcm/send',
+        method: 'POST',
+        headers: headers
+};
+
+var req=http.request(options , function(res){
+  res.setEncoding('utf-8');
+ 
+    var data = '';
+
+         
+
+            function respond() {
+                var error = null, id = null;
+
+                if (data.indexOf('Error=') === 0) {
+                    error = data.substring(6).trim();
+                }
+                else if (data.indexOf('id=') === 0) {
+                    id = data.substring(3).trim();
+                }
+                else {
+                    // No id nor error?
+                    error = 'InvalidServerResponse';
+                }
+                        //console.log("Error:%s And Id:%s And Data:%s",error,id,data);
+            }
+
+            res.on('data', function(chunk) {
+                data += chunk;
+              //  console.log(chunk);
+            });
+            
+                 res.on('end', respond);
+                 res.on('close', respond);
+                 
+                 console.log('Status:%s',res.statusCode);
+              //   console.log('Headers:%s',JSON.stringify(res.headers));
+});
+
+req.write(dataString);
+req.end();
+
+}
+
 
 app.listen(15437,function(){
 	console.log("Server Created .....");
